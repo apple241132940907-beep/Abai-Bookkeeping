@@ -1,4 +1,4 @@
-name: Build Android AAB
+name: Build AAB
 
 on:
   push:
@@ -16,11 +16,9 @@ jobs:
       contents: read
 
     steps:
-      # 1. 下載程式碼
       - name: Checkout
         uses: actions/checkout@v6
 
-      # 2. 設定 Java 17
       - name: Setup Java
         uses: actions/setup-java@v5
         with:
@@ -28,33 +26,48 @@ jobs:
           java-version: '17'
           cache: gradle
 
-      # 3. 確保 Gradle Wrapper 可以執行
-      - name: Grant execute permission for gradlew
+      - name: Grant execute permission
         run: chmod +x gradlew
 
-      # 4. 檢查 Java / Gradle
-      - name: Check environment
+      - name: Check project
         run: |
-          java -version
-          ./gradlew --version
+          echo "Current directory:"
+          pwd
 
-      # 5. 建立 Release AAB
-      - name: Build Release AAB
-        run: ./gradlew bundleRelease --stacktrace
+          echo ""
+          echo "Project files:"
+          ls -la
 
-      # 6. 找出產生的 AAB
+          echo ""
+          echo "Gradle files:"
+          find . -maxdepth 3 -type f \( -name "build.gradle" -o -name "build.gradle.kts" -o -name "settings.gradle" -o -name "settings.gradle.kts" \)
+
+      - name: Build AAB
+        run: |
+          ./gradlew bundleRelease --stacktrace
+
       - name: Find AAB
         run: |
-          echo "AAB files:"
-          find . -type f -name "*.aab"
+          echo "Searching for AAB files..."
+          find . -type f -name "*.aab" -print
 
-      # 7. 上傳 AAB
+      - name: Check AAB
+        run: |
+          AAB_COUNT=$(find . -type f -name "*.aab" | wc -l)
+
+          echo "Found $AAB_COUNT AAB file(s)."
+
+          if [ "$AAB_COUNT" -eq 0 ]; then
+            echo "ERROR: No AAB file was generated."
+            exit 1
+          fi
+
       - name: Upload AAB
         uses: actions/upload-artifact@v4
         with:
           name: android-aab
           path: |
-            */build/outputs/bundle/release/.aab
+            */.aab
           if-no-files-found: error
           retention-days: 7
           

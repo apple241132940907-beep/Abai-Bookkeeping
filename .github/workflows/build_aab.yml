@@ -24,45 +24,50 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-          cache: gradle
 
-      - name: Grant execute permission
-        run: chmod +x gradlew
-
-      - name: Check project
+      - name: Check project files
         run: |
-          echo "Current directory:"
+          echo "===== Current directory ====="
           pwd
 
-          echo ""
-          echo "Project files:"
+          echo "===== Files ====="
           ls -la
 
-          echo ""
-          echo "Gradle files:"
-          find . -maxdepth 3 -type f \( -name "build.gradle" -o -name "build.gradle.kts" -o -name "settings.gradle" -o -name "settings.gradle.kts" \)
+          echo "===== All important files ====="
+          find . -maxdepth 4 -type f \
+            \( -name "gradlew" \
+            -o -name "build.gradle" \
+            -o -name "build.gradle.kts" \
+            -o -name "settings.gradle" \
+            -o -name "settings.gradle.kts" \
+            -o -name "gradle-wrapper.properties" \
+            \) -print
 
-      - name: Build AAB
+      - name: Check Gradle Wrapper
+        run: |
+          if [ ! -f "./gradlew" ]; then
+            echo "ERROR: gradlew was not found."
+            echo "Please make sure the Gradle wrapper is included in the repository."
+            exit 1
+          fi
+
+          chmod +x ./gradlew
+
+          echo "Gradle wrapper found."
+          ./gradlew --version
+
+      - name: Build Release AAB
         run: |
           ./gradlew bundleRelease --stacktrace
 
       - name: Find AAB
+        if: success()
         run: |
-          echo "Searching for AAB files..."
+          echo "===== Searching for AAB ====="
           find . -type f -name "*.aab" -print
 
-      - name: Check AAB
-        run: |
-          AAB_COUNT=$(find . -type f -name "*.aab" | wc -l)
-
-          echo "Found $AAB_COUNT AAB file(s)."
-
-          if [ "$AAB_COUNT" -eq 0 ]; then
-            echo "ERROR: No AAB file was generated."
-            exit 1
-          fi
-
       - name: Upload AAB
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: android-aab

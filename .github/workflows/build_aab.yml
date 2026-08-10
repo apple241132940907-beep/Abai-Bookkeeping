@@ -27,15 +27,20 @@ jobs:
 
     - name: Build Android AAB
       run: |
-        if [ -f gradlew ]; then
+        GRADLEW_PATH=$(find . -name "gradlew" | head -n 1)
+        if [ -n "$GRADLEW_PATH" ]; then
+          PROJECT_DIR=$(dirname "$GRADLEW_PATH")
+          echo "Found gradlew in $PROJECT_DIR"
+          cd "$PROJECT_DIR"
           chmod +x gradlew
           ./gradlew bundleRelease
         else
-          echo "Gradle wrapper not found."
+          echo "Error: gradlew not found in repository!"
+          exit 1
         fi
 
     - name: Upload AAB Artifact
       uses: actions/upload-artifact@v4
       with:
         name: app-release-aab
-        path: "*/build/outputs/bundle/release/.aab"
+        path: "/**/build/outputs/bundle/release/*.aab"

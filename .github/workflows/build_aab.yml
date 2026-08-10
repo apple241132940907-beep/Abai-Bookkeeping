@@ -2,45 +2,59 @@ name: Build Android AAB
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches:
+      - main
+
   workflow_dispatch:
 
 jobs:
   build:
+    name: Build AAB
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      # 1. 下載程式碼
+      - name: Checkout
+        uses: actions/checkout@v6
 
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
+      # 2. 設定 Java 17
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
 
-    - name: Unzip project source
-      run: |
-        if [ -f jianzhang_app-2.zip ]; then
-          unzip -o jianzhang_app-2.zip -d .
-        fi
+      # 3. 確保 Gradle Wrapper 可以執行
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
 
-    - name: Build Android AAB
-      run: |
-        GRADLEW_PATH=$(find . -name "gradlew" | head -n 1)
-        if [ -n "$GRADLEW_PATH" ]; then
-          PROJECT_DIR=$(dirname "$GRADLEW_PATH")
-          echo "Found gradlew in $PROJECT_DIR"
-          cd "$PROJECT_DIR"
-          chmod +x gradlew
-          ./gradlew bundleRelease
-        else
-          echo "Error: gradlew not found in repository!"
-          exit 1
-        fi
+      # 4. 檢查 Java / Gradle
+      - name: Check environment
+        run: |
+          java -version
+          ./gradlew --version
 
-    - name: Upload AAB Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: app-release-aab
-        path: "/**/build/outputs/bundle/release/*.aab"
+      # 5. 建立 Release AAB
+      - name: Build Release AAB
+        run: ./gradlew bundleRelease --stacktrace
+
+      # 6. 找出產生的 AAB
+      - name: Find AAB
+        run: |
+          echo "AAB files:"
+          find . -type f -name "*.aab"
+
+      # 7. 上傳 AAB
+      - name: Upload AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-aab
+          path: |
+            */build/outputs/bundle/release/.aab
+          if-no-files-found: error
+          retention-days: 7
+          

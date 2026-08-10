@@ -39,6 +39,3 @@ jobs:
       with:
         name: app-release-aab
         path: "*/build/outputs/bundle/release/.aab"
-已傳送
-撰寫
-撰寫內容給
